@@ -1,159 +1,151 @@
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { generateAPIUrl } from '@/utils/utils';
-import { useChat } from '@ai-sdk/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { fetch as expoFetch } from 'expo/fetch';
-import { useEffect, useRef } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-export default function App() {
+export default function WelcomePage() {
   const tabBarHeight = useBottomTabBarHeight();
-  const scrollViewRef = useRef<ScrollView>(null);
   const colorScheme = useColorScheme();
+  const router = useRouter();
   const isDark = colorScheme === 'dark';
 
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading } = useChat({
-    fetch: expoFetch as unknown as typeof globalThis.fetch,
-    api: generateAPIUrl('/api/chat'),
-    onError: error => console.error(error, 'ERROR'),
-  });
-
-  // Auto scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollViewRef.current && messages.length > 0) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+  const features = [
+    {
+      icon: 'chatbubble-ellipses',
+      title: 'Smart Conversations',
+      description: 'Chat with an AI assistant that remembers your conversation history and provides contextual responses.',
+      action: () => router.push('/ask'),
+      actionText: 'Start Chatting'
+    },
+    {
+      icon: 'library-outline',
+      title: 'Knowledge Base',
+      description: 'Upload documents to enhance the AI&apos;s knowledge. Your documents are processed and used to provide more accurate answers.',
+      action: () => router.push('/rag-upload'),
+      actionText: 'Upload Documents'
+    },
+    {
+      icon: 'search-outline',
+      title: 'Intelligent Search',
+      description: 'Advanced BM25 search algorithm finds the most relevant information from your uploaded documents.',
+      action: () => router.push('/ask'),
+      actionText: 'Try It Now'
     }
-  }, [messages.length]);
-
-  if (error) return (
-    <View className="flex-1 items-center justify-center">
-      <Text className="text-red-500 font-bold text-lg">Error: {error.message}</Text>
-    </View>
-  );
-
-  const formatTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const handleSendMessage = (e: any) => {
-    handleSubmit(e);
-    e.preventDefault();
-  };
+  ];
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <ScrollView
         className="flex-1"
-        keyboardVerticalOffset={tabBarHeight + 10}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
+        showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1 px-4">
-          {messages.length === 0 ? (
-            <View className="flex-1 items-center justify-center">
-              <Animated.View entering={FadeInDown.delay(300).duration(700)} className="items-center">
-                <View className={`w-16 h-16 rounded-full items-center justify-center mb-4 ${isDark ? 'bg-indigo-600' : 'bg-indigo-500'}`}>
-                  <Ionicons name="chatbubble-ellipses" size={28} color="white" />
-                </View>
-                <Text className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>Welcome to RAG Chat</Text>
-                <Text className={`text-center text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Start a conversation with the AI assistant
-                </Text>
-              </Animated.View>
-            </View>
-          ) : (
-            <ScrollView
-              ref={scrollViewRef}
-              className="flex-1"
-              contentContainerStyle={{ paddingTop: 20, paddingBottom: 10 }}
-              showsVerticalScrollIndicator={false}
-            >
-              {messages.map((message, index) => (
-                <Animated.View
-                  key={message.id}
-                  entering={FadeInUp.delay(index * 100).duration(500)}
-                  className={`flex mb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
-                >
-                  <View
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${message.role === 'user'
-                      ? isDark ? 'bg-indigo-600' : 'bg-indigo-500'
-                      : isDark ? 'bg-gray-800' : 'bg-white'
-                      } ${message.role === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'}`}
-                  >
-                    <Text
-                      className={`${message.role === 'user' ? 'text-white' : isDark ? 'text-gray-200' : 'text-gray-800'} text-base`}
-                    >
-                      {message.content}
-                    </Text>
-                    <Text
-                      className={`text-xs mt-1 text-right ${message.role === 'user' ? 'text-indigo-200' : isDark ? 'text-gray-400' : 'text-gray-500'}`}
-                    >
-                      {formatTime()}
-                    </Text>
-                  </View>
-                </Animated.View>
-              ))}
-
-              {isLoading && (
-                <Animated.View
-                  entering={FadeInUp.duration(300)}
-                  className="flex items-start mb-4"
-                >
-                  <View className={`rounded-2xl rounded-tl-none px-4 py-3 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-                    <ActivityIndicator size="small" color={isDark ? '#a5b4fc' : '#6366f1'} />
-                  </View>
-                </Animated.View>
-              )}
-            </ScrollView>
-          )}
-
-          <View
-            className={`flex-row items-center border rounded-full mb-2 px-4 ${isDark
-              ? 'border-gray-700 bg-gray-800'
-              : 'border-gray-300 bg-white'
-              }`}
-            style={{ marginBottom: tabBarHeight + 10 }}
-          >
-            <TextInput
-              className={`flex-1 py-3 px-2 text-base ${isDark ? 'text-white' : 'text-gray-800'}`}
-              placeholder="Type a message..."
-              placeholderTextColor={isDark ? '#9ca3af' : '#9ca3af'}
-              value={input}
-              onChange={e =>
-                handleInputChange({
-                  ...e,
-                  target: {
-                    ...e.target,
-                    value: e.nativeEvent.text,
-                  },
-                } as unknown as React.ChangeEvent<HTMLInputElement>)
-              }
-              onSubmitEditing={handleSendMessage}
-              autoFocus={false}
-              multiline
-              style={{ maxHeight: 100 }}
-            />
-            <Pressable
-              onPress={handleSendMessage}
-              disabled={!input.trim() || isLoading}
-              className={`rounded-full p-2 ${!input.trim() || isLoading
-                ? isDark ? 'bg-gray-700' : 'bg-gray-200'
-                : isDark ? 'bg-indigo-600' : 'bg-indigo-500'
-                }`}
-            >
-              <Ionicons
-                name="send"
-                size={20}
-                color={!input.trim() || isLoading ? '#9ca3af' : 'white'}
-              />
-            </Pressable>
+        {/* Header Section */}
+        <Animated.View
+          entering={FadeInDown.delay(200).duration(800)}
+          className="items-center px-6 pt-12 pb-8"
+        >
+          <View className={`w-20 h-20 rounded-full items-center justify-center mb-6 ${isDark ? 'bg-indigo-600' : 'bg-indigo-500'}`}>
+            <Ionicons name="bulb" size={36} color="white" />
           </View>
+
+          <Text className={`text-3xl font-bold text-center mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Welcome to RAG Chat
+          </Text>
+
+          <Text className={`text-lg text-center leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            An intelligent chatbot powered by Retrieval-Augmented Generation technology
+          </Text>
+        </Animated.View>
+
+        {/* Features Section */}
+        <View className="px-6">
+          <Animated.Text
+            entering={FadeInUp.delay(400).duration(600)}
+            className={`text-xl font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}
+          >
+            What can you do?
+          </Animated.Text>
+
+          {features.map((feature, index) => (
+            <Animated.View
+              key={feature.title}
+              entering={FadeInUp.delay(600 + index * 150).duration(600)}
+              className={`mb-6 p-6 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isDark ? 0.3 : 0.1,
+                shadowRadius: 8,
+                elevation: 5,
+              }}
+            >
+              <View className="flex-row items-center mb-4">
+                <View className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${isDark ? 'bg-indigo-600' : 'bg-indigo-100'}`}>
+                  <Ionicons
+                    name={feature.icon as any}
+                    size={24}
+                    color={isDark ? 'white' : '#6366f1'}
+                  />
+                </View>
+                <Text className={`text-lg font-semibold flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {feature.title}
+                </Text>
+              </View>
+
+              <Text className={`text-base leading-relaxed mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                {feature.description}
+              </Text>
+
+              <TouchableOpacity
+                onPress={feature.action}
+                className={`py-3 px-6 rounded-xl ${isDark ? 'bg-indigo-600' : 'bg-indigo-500'}`}
+              >
+                <Text className="text-white font-medium text-center">
+                  {feature.actionText}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Getting Started Section */}
+        <Animated.View
+          entering={FadeInUp.delay(1000).duration(600)}
+          className="px-6 mt-4"
+        >
+          <View className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-indigo-50 border border-indigo-200'}`}>
+            <Text className={`text-lg font-semibold mb-3 ${isDark ? 'text-white' : 'text-indigo-900'}`}>
+              🚀 Getting Started
+            </Text>
+
+            <View className="space-y-2">
+              <View className="flex-row items-center mb-2">
+                <Text className={`text-base mr-3 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>1.</Text>
+                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-indigo-800'}`}>
+                  Upload documents to build your knowledge base
+                </Text>
+              </View>
+
+              <View className="flex-row items-center mb-2">
+                <Text className={`text-base mr-3 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>2.</Text>
+                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-indigo-800'}`}>
+                  Start a conversation in the chat tab
+                </Text>
+              </View>
+
+              <View className="flex-row items-center">
+                <Text className={`text-base mr-3 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>3.</Text>
+                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-indigo-800'}`}>
+                  Ask questions related to your uploaded content
+                </Text>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -1,97 +1,319 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { generateAPIUrl } from '@/utils/utils';
-import { useCompletion } from '@ai-sdk/react';
+import { useChat } from '@ai-sdk/react';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useRouter } from 'expo-router';
 import { fetch as expoFetch } from 'expo/fetch';
-import React, { useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+interface Chat {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const Page = () => {
-  const [message, setMessage] = useState('How to make a pie?');
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<Chat[]>([]);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [loadingChats, setLoadingChats] = useState(false);
   const tabBarHeight = useBottomTabBarHeight();
+  const router = useRouter();
 
   const backgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1A1A1A' }, 'background');
   const textColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
 
+  // Load chat history
+  const loadChatHistory = async () => {
+    setLoadingChats(true);
+    try {
+      const response = await fetch(generateAPIUrl('/api/chats'));
+      const data = await response.json();
+      if (data.chats) {
+        setChatHistory(data.chats);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setLoadingChats(false);
+    }
+  };
+
+  // Load chat history on component mount
+  useEffect(() => {
+    loadChatHistory();
+  }, []);
+
   const {
-    completion,
-    complete,
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
     isLoading,
-    error
-  } = useCompletion({
-    api: generateAPIUrl('/api/completion'),
-    streamProtocol: 'text',
+    error,
+    setMessages
+  } = useChat({
+    api: generateAPIUrl('/api/chat'),
     fetch: expoFetch as unknown as typeof globalThis.fetch,
+    body: {
+      chatId: currentChatId
+    },
+    onResponse: (response) => {
+      // Extract chatId from response headers
+      const chatId = response.headers.get('X-Chat-Id');
+      if (chatId && !currentChatId) {
+        setCurrentChatId(chatId);
+        // Reload chat history to include the new chat
+        loadChatHistory();
+      }
+    },
     onError: (err) => {
-      console.error(err);
+      console.error('Chat error:', err);
     }
   });
 
-  const onSubmit = async () => {
-    if (!message.trim()) return;
-    complete(message);
+  const startNewChat = () => {
+    setCurrentChatId(null);
+    setMessages([]);
+    setShowSidebar(false);
+  };
+
+  const selectChat = async (chatId: string) => {
+    try {
+      // Load messages for the selected chat
+      const response = await fetch(generateAPIUrl(`/api/chats/${chatId}/messages`));
+      const data = await response.json();
+
+      if (data.messages) {
+        setCurrentChatId(chatId);
+        // Convert database messages to chat format
+        const chatMessages = data.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.createdAt
+        }));
+        setMessages(chatMessages);
+      }
+      setShowSidebar(false);
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      Alert.alert('Error', 'Failed to load chat history');
+    }
+  };
+
+  const deleteChat = async (chatId: string) => {
+    try {
+      await fetch(generateAPIUrl('/api/chats'), {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatId }),
+      });
+
+      // Remove from local state
+      setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
+
+      // If this was the current chat, start a new one
+      if (currentChatId === chatId) {
+        startNewChat();
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      Alert.alert('Error', 'Failed to delete chat');
+    }
+  };
+
+  const confirmDeleteChat = (chatId: string, title: string) => {
+    Alert.alert(
+      'Delete Chat',
+      `Are you sure you want to delete "${title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteChat(chatId) }
+      ]
+    );
   };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor }}>
-      <View className="flex-1 p-4" style={{ paddingBottom: 8 + tabBarHeight }}>
-        <Text className="text-2xl font-bold mb-4" style={{ color: textColor }}>
-          Ask Anything
-        </Text>
-
-        {/* Input area */}
-        <View className="flex-row items-center mb-4">
-          <View className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-3">
-            <TextInput
-              className="text-base min-h-[40px]"
-              style={{ color: textColor }}
-              placeholder="Enter your question here..."
-              placeholderTextColor={textColor + '80'}
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
+      <View className="flex-1 relative">
+        {/* Main Chat Area */}
+        <View className="flex-1 p-4" style={{ paddingBottom: 8 + tabBarHeight }}>
+          {/* Header */}
+          <View className="flex-row justify-between items-center mb-4">
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                className="mr-3 p-2 rounded-lg bg-gray-100 dark:bg-gray-800"
+                onPress={() => setShowSidebar(!showSidebar)}
+              >
+                <Text className="text-lg">☰</Text>
+              </TouchableOpacity>
+              <Text className="text-xl font-bold" style={{ color: textColor }}>
+                Chat Assistant
+              </Text>
+            </View>
+            <TouchableOpacity
+              className="px-4 py-2 rounded-xl bg-blue-500"
+              onPress={startNewChat}
+            >
+              <Text className="text-white font-medium">New Chat</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            className="ml-2 p-3 rounded-xl bg-blue-500 items-center justify-center"
-            onPress={onSubmit}
-            disabled={isLoading || !message.trim()}
-            style={{ opacity: (isLoading || !message.trim()) ? 0.5 : 1 }}
+
+          {/* Messages display */}
+          <ScrollView
+            className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-4 mb-4"
+            contentContainerStyle={{ paddingBottom: 16 }}
           >
-            <Text className="text-white font-medium">
-              {isLoading ? "Loading..." : "Send"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+            {messages.length === 0 && !isLoading && (
+              <Text className="text-center mt-5 text-gray-500 dark:text-gray-400">
+                Start a conversation by typing a message below
+              </Text>
+            )}
 
-        {/* Messages display */}
-        <ScrollView
-          className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-4"
-          contentContainerStyle={{ paddingBottom: 8 + tabBarHeight / 2 }}
-        >
-          {!completion && !isLoading && (
-            <Text className="text-center mt-5 text-gray-500 dark:text-gray-400">
-              Ask a question to get a response
-            </Text>
-          )}
+            {messages.map((message) => (
+              <View key={message.id} className={`mb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <View className={`max-w-[80%] p-3 rounded-lg ${message.role === 'user'
+                    ? 'bg-blue-500'
+                    : 'bg-gray-200 dark:bg-gray-700'
+                  }`}>
+                  <Text className={`text-base leading-6 ${message.role === 'user'
+                      ? 'text-white'
+                      : 'text-gray-900 dark:text-gray-100'
+                    }`}>
+                    {message.content}
+                  </Text>
+                </View>
+              </View>
+            ))}
 
-          {completion && (
-            <Text className="text-base leading-6" style={{ color: textColor }}>
-              {completion}
-            </Text>
-          )}
+            {isLoading && (
+              <View className="items-start mb-4">
+                <View className="bg-gray-200 dark:bg-gray-700 p-3 rounded-lg">
+                  <ActivityIndicator color={textColor} />
+                </View>
+              </View>
+            )}
+          </ScrollView>
 
-          {isLoading && (
-            <View className="items-center p-3">
-              <ActivityIndicator color={textColor} />
+          {/* Input area */}
+          <View className="flex-row items-center">
+            <View className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-3">
+              <TextInput
+                className="text-base min-h-[40px]"
+                style={{ color: textColor }}
+                placeholder="Type your message here..."
+                placeholderTextColor={textColor + '80'}
+                value={input}
+                onChangeText={(text) => handleInputChange({ target: { value: text } } as any)}
+                multiline
+              />
+            </View>
+            <TouchableOpacity
+              className="ml-2 p-3 rounded-xl bg-blue-500 items-center justify-center"
+              onPress={(e) => handleSubmit(e as any)}
+              disabled={isLoading || !input.trim()}
+              style={{ opacity: (isLoading || !input.trim()) ? 0.5 : 1 }}
+            >
+              <Text className="text-white font-medium">
+                {isLoading ? "Sending..." : "Send"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {error && (
+            <View className="p-3 bg-red-500 rounded-lg mt-4">
+              <Text className="text-white">{error.message}</Text>
             </View>
           )}
-        </ScrollView>
+        </View>
 
-        {error && (
-          <View className="p-3 bg-red-500 rounded-lg mb-4">
-            <Text className="text-white">{error instanceof Error ? error.message : String(error)}</Text>
-          </View>
+        {/* Floating Sidebar Overlay */}
+        {showSidebar && (
+          <>
+            {/* Backdrop */}
+            <TouchableOpacity
+              className="absolute inset-0 bg-black bg-opacity-50 z-10"
+              onPress={() => setShowSidebar(false)}
+              activeOpacity={1}
+            />
+
+            {/* Sidebar */}
+            <View className="absolute left-0 top-0 bottom-0 w-80 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-20">
+              <View className="p-4 flex-1">
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-lg font-bold" style={{ color: textColor }}>
+                    Chat History
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowSidebar(false)}>
+                    <Text className="text-gray-500 text-xl">×</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* RAG Upload Button */}
+                <TouchableOpacity
+                  className="w-full p-3 bg-green-500 rounded-lg mb-4"
+                  onPress={() => {
+                    setShowSidebar(false);
+                    router.push('/rag-upload');
+                  }}
+                >
+                  <Text className="text-white text-center font-medium">
+                    📁 Upload RAG Knowledge
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Chat History List */}
+                <ScrollView className="flex-1">
+                  {loadingChats ? (
+                    <View className="items-center p-4">
+                      <ActivityIndicator color={textColor} />
+                      <Text className="text-gray-500 mt-2">Loading chats...</Text>
+                    </View>
+                  ) : chatHistory.length === 0 ? (
+                    <Text className="text-gray-500 text-center p-4">
+                      No chat history yet
+                    </Text>
+                  ) : (
+                    chatHistory.map((chat) => (
+                      <View key={chat.id} className="mb-2">
+                        <TouchableOpacity
+                          className={`p-3 rounded-lg flex-row justify-between items-center ${currentChatId === chat.id
+                              ? 'bg-blue-100 dark:bg-blue-900'
+                              : 'bg-gray-100 dark:bg-gray-800'
+                            }`}
+                          onPress={() => selectChat(chat.id)}
+                        >
+                          <View className="flex-1">
+                            <Text
+                              className="font-medium text-sm"
+                              style={{ color: textColor }}
+                              numberOfLines={1}
+                            >
+                              {chat.title}
+                            </Text>
+                            <Text className="text-xs text-gray-500 mt-1">
+                              {new Date(chat.updatedAt).toLocaleDateString()}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            className="p-2"
+                            onPress={() => confirmDeleteChat(chat.id, chat.title)}
+                          >
+                            <Text className="text-red-500">🗑️</Text>
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
+              </View>
+            </View>
+          </>
         )}
       </View>
     </SafeAreaView>
