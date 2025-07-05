@@ -1,8 +1,19 @@
-# Welcome to your Expo app 👋
+# RAG Chatbot App 🤖
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile application built with [Expo](https://expo.dev) and React Native that integrates AI-powered features including:
+- Interactive chat with AI (RAG-enhanced)
+- Text completion
+- AI image generation
 
-## Get started
+## Project Overview
+
+This application demonstrates how to build a modern AI-powered mobile experience using:
+- Expo & React Native for cross-platform mobile development
+- AI SDK for seamless AI integration
+- NativeWind for styling
+- Expo Router for navigation
+
+## Getting Started
 
 1. Install dependencies
 
@@ -16,35 +27,60 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. Run on your preferred platform:
+   - iOS: Press `i` in terminal or use `npm run ios`
+   - Android: Press `a` in terminal or use `npm run android`
+   - Web: Press `w` in terminal or use `npm run web`
+   - Expo Go: Scan QR code with the Expo Go app ([iOS](https://apps.apple.com/app/expo-go/id982107779) | [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Application Structure
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+The app consists of three main tabs:
+1. **Chat Tab** (`app/(tabs)/index.tsx`): Full conversation interface with the AI assistant
+2. **Ask Tab** (`app/(tabs)/ask.tsx`): Quick Q&A with the AI without conversation history
+3. **Images Tab** (`app/(tabs)/images.tsx`): Generate AI images from text descriptions
 
-## Get a fresh project
+## API Integration
 
-When you're ready, run:
+The application connects to several API endpoints:
+- `/api/chat`: For conversational AI interactions
+- `/api/completion`: For single-prompt text completions
+- `/api/generate-image`: For AI image generation
 
-```bash
-npm run reset-project
-```
+## Project Flow
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+1. **User Journey**:
+   - Users can switch between chat, ask, and image generation tabs
+   - In the chat tab, users can have ongoing conversations with the AI assistant
+   - The ask tab provides quick answers to one-off questions
+   - The images tab allows users to generate AI images from text descriptions
 
-## Learn more
+2. **Technical Flow**:
+   - User inputs are processed through the UI
+   - Requests are sent to the appropriate API endpoints
+   - Responses are streamed back and displayed in the UI
+   - Dark/light mode is supported throughout the app
 
-To learn more about developing your project with Expo, look at the following resources:
+## Development
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Key Technologies
+- **React Native**: Core framework for mobile development
+- **Expo**: Development platform for React Native
+- **Expo Router**: File-based routing system
+- **AI SDK**: Integration with AI APIs
+- **NativeWind/Tailwind**: For styling
+- **React Native Reanimated**: For smooth animations
 
-## Join the community
+### Folder Structure
+- `/app`: Main application code with file-based routing
+  - `/(tabs)`: Tab-based navigation screens
+  - `/api`: API endpoints for AI services
+- `/components`: Reusable UI components
+- `/hooks`: Custom React hooks
+- `/utils`: Utility functions
 
-Join our community of developers creating universal apps.
+## Resources
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo Documentation](https://docs.expo.dev/)
+- [React Native Documentation](https://reactnative.dev/)
+- [AI SDK Documentation](https://ai.vercel.ai/docs)
