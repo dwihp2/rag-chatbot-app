@@ -33,6 +33,16 @@ This application demonstrates how to build a modern AI-powered mobile experience
    - Web: Press `w` in terminal or use `npm run web`
    - Expo Go: Scan QR code with the Expo Go app ([iOS](https://apps.apple.com/app/expo-go/id982107779) | [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
 
+## Quick Start with QR Code
+
+Scan this QR code with your Expo Go app to open the project:
+
+![Expo QR Code](https://qr.expo.dev/expo-go?owner=dwihp2&slug=rag-chatbot-app&releaseChannel=default&host=exp.host)
+
+> **Note**: This QR code links to the deployed version of this application on Expo's servers.
+>
+> You can also access the project directly in Expo Go by searching for "@dwihp2/rag-chatbot-app" or by visiting the [project page](https://expo.dev/@dwihp2/rag-chatbot-app) on Expo's website.
+
 ## Application Structure
 
 The app consists of three main tabs:
