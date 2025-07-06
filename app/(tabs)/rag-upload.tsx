@@ -40,10 +40,14 @@ const RAGUploadPage = () => {
       const data = await response.json();
       if (data.documents) {
         setDocuments(data.documents);
+      } else {
+        // Handle expected errors gracefully during transition
+        setDocuments([]);
       }
     } catch (error) {
-      console.error('Error loading documents:', error);
-      Alert.alert('Error', 'Failed to load documents');
+      // Expected error during transition - log but don't show error alert
+      console.warn('Expected error loading documents (during transition):', error);
+      setDocuments([]);
     } finally {
       setLoading(false);
     }

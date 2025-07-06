@@ -36,8 +36,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ask"
         options={{
-          title: 'Ask',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="questionmark.circle.fill" color={color} />,
+          title: 'Chat',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -45,6 +45,13 @@ export default function TabLayout() {
         options={{
           title: 'Images',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="photo.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="rag-upload"
+        options={{
+          title: 'Recipes',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
         }}
       />
     </Tabs>

@@ -4,8 +4,9 @@ import { useChat } from '@ai-sdk/react';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import { fetch as expoFetch } from 'expo/fetch';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Markdown from 'react-native-markdown-display';
 
 interface Chat {
   id: string;
@@ -19,6 +20,7 @@ const Page = () => {
   const [chatHistory, setChatHistory] = useState<Chat[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [loadingChats, setLoadingChats] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
   const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
 
@@ -71,8 +73,61 @@ const Page = () => {
     },
     onError: (err) => {
       console.error('Chat error:', err);
+      // Don't show errors for expected "no knowledge found" scenarios
+      if (err.message &&
+        (err.message.includes('No relevant knowledge found') ||
+          err.message.includes("don't have information") ||
+          err.message.includes("specialized in helping"))) {
+        // This is handled by the API's fallback response, so we don't need to show an error
+        return;
+      }
     }
   });
+
+  // Auto-scroll to bottom when messages change or when loading
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: true });
+      }
+    };
+
+    // Small delay to ensure content is rendered
+    const timer = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timer);
+  }, [messages, isLoading]);
+
+  // Additional scroll effect for real-time streaming during loading
+  useEffect(() => {
+    if (isLoading && messages.length > 0) {
+      const interval = setInterval(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ animated: true });
+        }
+      }, 200); // Scroll every 200ms during streaming
+
+      return () => clearInterval(interval);
+    }
+  }, [isLoading, messages.length]);
+
+  // Monitor content length changes for better streaming scroll behavior
+  useEffect(() => {
+    if (isLoading && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        // Scroll when assistant message content changes during streaming
+        const scrollToBottom = () => {
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollToEnd({ animated: false });
+          }
+        };
+
+        // Small delay to ensure rendering is complete
+        const timer = setTimeout(scrollToBottom, 50);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isLoading, messages]);
 
   const startNewChat = () => {
     setCurrentChatId(null);
@@ -166,6 +221,7 @@ const Page = () => {
 
           {/* Messages display */}
           <ScrollView
+            ref={scrollViewRef}
             className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-4 mb-4"
             contentContainerStyle={{ paddingBottom: 16 }}
           >
@@ -178,15 +234,85 @@ const Page = () => {
             {messages.map((message) => (
               <View key={message.id} className={`mb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <View className={`max-w-[80%] p-3 rounded-lg ${message.role === 'user'
-                    ? 'bg-blue-500'
-                    : 'bg-gray-200 dark:bg-gray-700'
+                  ? 'bg-blue-500'
+                  : 'bg-gray-200 dark:bg-gray-700'
                   }`}>
-                  <Text className={`text-base leading-6 ${message.role === 'user'
-                      ? 'text-white'
-                      : 'text-gray-900 dark:text-gray-100'
-                    }`}>
-                    {message.content}
-                  </Text>
+                  {message.role === 'user' ? (
+                    <Text className={`text-base leading-6 text-white`}>
+                      {message.content}
+                    </Text>
+                  ) : (
+                    <Markdown
+                      style={{
+                        body: {
+                          color: textColor,
+                          fontSize: 16,
+                          lineHeight: 24,
+                        },
+                        heading1: {
+                          color: textColor,
+                          fontSize: 20,
+                          fontWeight: 'bold',
+                          marginBottom: 8,
+                        },
+                        heading2: {
+                          color: textColor,
+                          fontSize: 18,
+                          fontWeight: 'bold',
+                          marginBottom: 6,
+                        },
+                        heading3: {
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: 'bold',
+                          marginBottom: 4,
+                        },
+                        paragraph: {
+                          color: textColor,
+                          fontSize: 16,
+                          lineHeight: 24,
+                          marginBottom: 8,
+                        },
+                        listItem: {
+                          color: textColor,
+                          fontSize: 16,
+                          lineHeight: 24,
+                        },
+                        strong: {
+                          color: textColor,
+                          fontWeight: 'bold',
+                        },
+                        em: {
+                          color: textColor,
+                          fontStyle: 'italic',
+                        },
+                        code_inline: {
+                          backgroundColor: 'rgba(0,0,0,0.1)',
+                          color: textColor,
+                          paddingHorizontal: 4,
+                          paddingVertical: 2,
+                          borderRadius: 4,
+                          fontSize: 14,
+                        },
+                        code_block: {
+                          backgroundColor: 'rgba(0,0,0,0.1)',
+                          color: textColor,
+                          padding: 8,
+                          borderRadius: 4,
+                          fontSize: 14,
+                        },
+                        blockquote: {
+                          borderLeftWidth: 4,
+                          borderLeftColor: '#ccc',
+                          paddingLeft: 12,
+                          marginLeft: 8,
+                          fontStyle: 'italic',
+                        },
+                      }}
+                    >
+                      {message.content}
+                    </Markdown>
+                  )}
                 </View>
               </View>
             ))}
@@ -225,11 +351,13 @@ const Page = () => {
             </TouchableOpacity>
           </View>
 
-          {error && (
-            <View className="p-3 bg-red-500 rounded-lg mt-4">
-              <Text className="text-white">{error.message}</Text>
-            </View>
-          )}
+          {error && !error.message?.includes('No relevant knowledge found') &&
+            !error.message?.includes("don't have information") &&
+            !error.message?.includes("specialized in helping") && (
+              <View className="p-3 bg-red-500 rounded-lg mt-4">
+                <Text className="text-white">{error.message}</Text>
+              </View>
+            )}
         </View>
 
         {/* Floating Sidebar Overlay */}
@@ -283,8 +411,8 @@ const Page = () => {
                       <View key={chat.id} className="mb-2">
                         <TouchableOpacity
                           className={`p-3 rounded-lg flex-row justify-between items-center ${currentChatId === chat.id
-                              ? 'bg-blue-100 dark:bg-blue-900'
-                              : 'bg-gray-100 dark:bg-gray-800'
+                            ? 'bg-blue-100 dark:bg-blue-900'
+                            : 'bg-gray-100 dark:bg-gray-800'
                             }`}
                           onPress={() => selectChat(chat.id)}
                         >

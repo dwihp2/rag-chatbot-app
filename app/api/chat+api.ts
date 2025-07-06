@@ -1,12 +1,8 @@
 import { addMessage, createChat, generateChatTitle } from '@/lib/services/chat-service';
-import { initializeSearchIndex, searchDocuments } from '@/lib/services/rag-service';
+import { embeddingSearch, initializeEnhancedRAG } from '@/lib/services/enhanced-rag-service';
+import { buildKnowledgeContext, RAG_SYSTEM_PROMPT, shouldProvideKnowledgeResponse } from '@/lib/services/rag-prompts';
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
-
-// Configuration: Minimum BM25 score threshold for considering knowledge relevant
-// Lower values = more permissive, higher values = more strict
-// Typical BM25 scores range from 0-10, with 0.5-1.0 being reasonable thresholds
-const MIN_RELEVANCE_SCORE = 0.5;
 
 export async function POST(req: Request) {
   try {
@@ -35,112 +31,86 @@ export async function POST(req: Request) {
       await addMessage(currentChatId, 'user', userMessage.content);
     }
 
-    // Initialize RAG search index if not already done
-    await initializeSearchIndex();
+    // Initialize Enhanced RAG system if not already done
+    await initializeEnhancedRAG();
 
-    // Search for relevant knowledge from RAG database
-    const relevantChunks = await searchDocuments(userMessage?.content || '', 3);
+    // Perform embedding search for relevant knowledge
+    const searchResults = await embeddingSearch(userMessage?.content || '', 3);
 
-    // Filter chunks based on relevance score threshold
-    const highQualityChunks = relevantChunks.filter(chunk => chunk.score >= MIN_RELEVANCE_SCORE);
-
-    // Debug log: Retrieved knowledge with scores
-    console.log('🔍 RAG Knowledge Retrieved:', {
+    // Debug log: Search results
+    console.log('🔍 Embedding Search Results:', {
       query: userMessage?.content || '',
-      totalChunks: relevantChunks.length,
-      highQualityChunks: highQualityChunks.length,
-      minThreshold: MIN_RELEVANCE_SCORE,
-      chunks: relevantChunks.map((chunk, index) => ({
+      totalResults: searchResults.length,
+      results: searchResults.map((result, index) => ({
         index: index + 1,
-        id: chunk.id,
-        score: chunk.score,
-        aboveThreshold: chunk.score >= MIN_RELEVANCE_SCORE,
-        content: chunk.content.substring(0, 100) + '...',
-        fullContent: chunk.content,
-        metadata: chunk.metadata,
-        createdAt: chunk.createdAt
+        id: result.chunk.id,
+        score: result.score.toFixed(4),
+        source: result.source,
+        preview: result.chunk.content.substring(0, 100) + '...'
       }))
     });
 
-    // Debug log: Detailed scoring information
-    if (relevantChunks.length > 0) {
-      console.log('📊 Detailed Scoring Information:');
-      relevantChunks.forEach((chunk, index) => {
-        console.log(`  Chunk ${index + 1}:`, {
-          id: chunk.id,
-          score: chunk.score.toFixed(4),
-          aboveThreshold: chunk.score >= MIN_RELEVANCE_SCORE ? '✅' : '❌',
-          length: chunk.content.length,
-          preview: chunk.content.substring(0, 150) + '...'
-        });
-      });
-    } else {
-      console.log('⚠️  No relevant chunks found for query:', userMessage?.content);
-    }
+    // Determine if we have sufficient knowledge to answer
+    const hasRelevantKnowledge = shouldProvideKnowledgeResponse(searchResults);
 
-    // Build context from relevant chunks
-    let contextPrompt = '';
-    if (highQualityChunks.length > 0) {
-      contextPrompt = `
+    let enhancedMessages = [...messages];
 
-You are a helpful assistant that only answers questions based on the provided knowledge from the database. You must follow these strict rules:
+    if (hasRelevantKnowledge) {
+      // Build knowledge context
+      const knowledgeContext = buildKnowledgeContext(searchResults);
 
-1. ONLY use information from the knowledge provided below
-2. If the knowledge doesn't contain information to answer the question, respond with "I don't have enough information in my knowledge base to answer that question."
-3. Do not use your general knowledge or make assumptions beyond what's provided
-4. Be precise and cite which knowledge section you're using
-
-Based on the following knowledge from the database:
-
-${highQualityChunks.map((chunk, index) => `
-Knowledge ${index + 1} (Relevance Score: ${chunk.score.toFixed(4)}):
-${chunk.content}
-`).join('\n')}
-
-Please answer the user's question using ONLY the information provided above. If the information is not sufficient or not present, say "I don't have enough information in my knowledge base to answer that question."
-
-`;
-
-      // Debug log: Context prompt being used
-      console.log('📝 Context Prompt Generated:', {
-        contextLength: contextPrompt.length,
-        chunksUsed: highQualityChunks.length,
-        averageScore: highQualityChunks.reduce((sum, chunk) => sum + chunk.score, 0) / highQualityChunks.length,
-        context: contextPrompt
-      });
-    } else {
-      // No high-quality chunks found, provide a context that instructs to say "don't know"
-      contextPrompt = `
-
-You are a helpful assistant with access to a knowledge database. Currently, I don't have any relevant information in my knowledge base to answer the user's question. 
-
-Please respond with: "I don't have enough information in my knowledge base to answer that question. Could you please provide more context or ask about something else?"
-
-`;
-      console.log('❌ No high-quality chunks found - will respond with "don\'t know"');
-    }
-
-    // Prepare messages with RAG context
-    const enhancedMessages = [...messages];
-    if (userMessage?.role === 'user') {
-      // Always insert the context before the last user message
+      // Enhance the user message with knowledge context and system prompt
       enhancedMessages[enhancedMessages.length - 1] = {
         ...userMessage,
-        content: contextPrompt + userMessage.content
+        content: `${RAG_SYSTEM_PROMPT}\n\n${knowledgeContext}User Question: ${userMessage.content}`
       };
 
-      // Debug log: Final message being sent to AI
-      console.log('🤖 Final Message to AI:', {
-        hasContext: contextPrompt.length > 0,
-        contextType: highQualityChunks.length > 0 ? 'knowledge-based' : 'no-knowledge',
-        messageLength: enhancedMessages[enhancedMessages.length - 1].content.length
+      console.log('✅ Enhanced message with knowledge context:', {
+        contextLength: knowledgeContext.length,
+        resultsUsed: searchResults.length,
+        averageScore: searchResults.reduce((sum, r) => sum + r.score, 0) / searchResults.length
+      });
+    } else {
+      // No relevant knowledge found - return simple "I don't know" response
+      console.log('❌ No relevant knowledge found - providing simple fallback response');
+
+      // Create a simple fallback response
+      const fallbackResponse = "I don't have information about that topic in my culinary knowledge base. I'm specialized in helping with recipes, cooking techniques, and food-related questions.\n\nCould you ask me about:\n- Specific recipes or cooking methods\n- Ingredient substitutions\n- Cooking techniques\n- Food safety tips\n\nOr you can upload cookbooks and recipe collections to expand my knowledge base!";
+
+      // Save the simple response to database
+      await addMessage(currentChatId, 'assistant', fallbackResponse);
+
+      // Return streaming response using AI SDK format
+      const result = streamText({
+        model: openai("gpt-4o-mini"),
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful culinary assistant. You must respond with exactly the provided text, word for word, without any modifications or additions.'
+          },
+          {
+            role: 'user',
+            content: `Please respond with exactly this text: "${fallbackResponse}"`
+          }
+        ],
+        temperature: 0,
+        maxTokens: 300,
+      });
+
+      return result.toDataStreamResponse({
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Encoding': 'none',
+          'X-Chat-Id': currentChatId,
+        },
       });
     }
 
-    // Generate AI response
+    // Generate AI response (only when we have relevant knowledge)
     const result = streamText({
       model: openai("gpt-4o-mini"),
       messages: enhancedMessages,
+      temperature: 0.5,
       onFinish: async (result) => {
         // Save the assistant's response to database
         if (result.text) {
@@ -157,7 +127,17 @@ Please respond with: "I don't have enough information in my knowledge base to an
       },
     });
   } catch (error) {
-    console.error('Error in chat API:', error);
-    return Response.json({ error: 'Failed to process chat' }, { status: 500 });
+    console.error('Error in enhanced chat API:', error);
+
+    // Handle specific OpenAI errors
+    if (error && typeof error === 'object' && 'message' in error) {
+      const errorMessage = (error as any).message;
+      if (errorMessage.includes('model') || errorMessage.includes('API')) {
+        return Response.json({ error: 'AI service temporarily unavailable' }, { status: 503 });
+      }
+    }
+
+    // For other errors, return a generic message
+    return Response.json({ error: 'An error occurred while processing your request' }, { status: 500 });
   }
 }

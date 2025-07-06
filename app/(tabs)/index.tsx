@@ -14,24 +14,24 @@ export default function WelcomePage() {
   const features = [
     {
       icon: 'chatbubble-ellipses',
-      title: 'Smart Conversations',
-      description: 'Chat with an AI assistant that remembers your conversation history and provides contextual responses.',
+      title: 'Culinary Assistant',
+      description: 'Chat with your personal AI chef that knows your recipes and cooking techniques. Get step-by-step guidance and cooking tips.',
       action: () => router.push('/ask'),
-      actionText: 'Start Chatting'
+      actionText: 'Start Cooking Chat'
     },
     {
       icon: 'library-outline',
-      title: 'Knowledge Base',
-      description: 'Upload documents to enhance the AI&apos;s knowledge. Your documents are processed and used to provide more accurate answers.',
+      title: 'Recipe Collection',
+      description: 'Upload your cookbooks, recipes, and cooking guides. The AI learns from your collection to provide personalized cooking advice.',
       action: () => router.push('/rag-upload'),
-      actionText: 'Upload Documents'
+      actionText: 'Upload Recipes'
     },
     {
       icon: 'search-outline',
-      title: 'Intelligent Search',
-      description: 'Advanced BM25 search algorithm finds the most relevant information from your uploaded documents.',
+      title: 'Recipe Search',
+      description: 'Advanced search through your recipe collection. Find ingredients, techniques, and cooking methods instantly.',
       action: () => router.push('/ask'),
-      actionText: 'Try It Now'
+      actionText: 'Search Recipes'
     }
   ];
 
@@ -47,16 +47,16 @@ export default function WelcomePage() {
           entering={FadeInDown.delay(200).duration(800)}
           className="items-center px-6 pt-12 pb-8"
         >
-          <View className={`w-20 h-20 rounded-full items-center justify-center mb-6 ${isDark ? 'bg-indigo-600' : 'bg-indigo-500'}`}>
-            <Ionicons name="bulb" size={36} color="white" />
+          <View className={`w-20 h-20 rounded-full items-center justify-center mb-6 ${isDark ? 'bg-orange-600' : 'bg-orange-500'}`}>
+            <Ionicons name="restaurant" size={36} color="white" />
           </View>
 
           <Text className={`text-3xl font-bold text-center mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Welcome to RAG Chat
+            Culinary AI Assistant
           </Text>
 
           <Text className={`text-lg text-center leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            An intelligent chatbot powered by Retrieval-Augmented Generation technology
+            Your personal AI chef powered by your recipe collection and cooking knowledge
           </Text>
         </Animated.View>
 
@@ -83,11 +83,11 @@ export default function WelcomePage() {
               }}
             >
               <View className="flex-row items-center mb-4">
-                <View className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${isDark ? 'bg-indigo-600' : 'bg-indigo-100'}`}>
+                <View className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${isDark ? 'bg-orange-600' : 'bg-orange-100'}`}>
                   <Ionicons
                     name={feature.icon as any}
                     size={24}
-                    color={isDark ? 'white' : '#6366f1'}
+                    color={isDark ? 'white' : '#ea580c'}
                   />
                 </View>
                 <Text className={`text-lg font-semibold flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -101,7 +101,7 @@ export default function WelcomePage() {
 
               <TouchableOpacity
                 onPress={feature.action}
-                className={`py-3 px-6 rounded-xl ${isDark ? 'bg-indigo-600' : 'bg-indigo-500'}`}
+                className={`py-3 px-6 rounded-xl ${isDark ? 'bg-orange-600' : 'bg-orange-500'}`}
               >
                 <Text className="text-white font-medium text-center">
                   {feature.actionText}
@@ -116,30 +116,30 @@ export default function WelcomePage() {
           entering={FadeInUp.delay(1000).duration(600)}
           className="px-6 mt-4"
         >
-          <View className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-indigo-50 border border-indigo-200'}`}>
-            <Text className={`text-lg font-semibold mb-3 ${isDark ? 'text-white' : 'text-indigo-900'}`}>
-              🚀 Getting Started
+          <View className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-orange-50 border border-orange-200'}`}>
+            <Text className={`text-lg font-semibold mb-3 ${isDark ? 'text-white' : 'text-orange-900'}`}>
+              🍳 Getting Started
             </Text>
 
             <View className="space-y-2">
               <View className="flex-row items-center mb-2">
-                <Text className={`text-base mr-3 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>1.</Text>
-                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-indigo-800'}`}>
-                  Upload documents to build your knowledge base
+                <Text className={`text-base mr-3 ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>1.</Text>
+                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-orange-800'}`}>
+                  Upload your cookbooks, recipes, and cooking guides
                 </Text>
               </View>
 
               <View className="flex-row items-center mb-2">
-                <Text className={`text-base mr-3 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>2.</Text>
-                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-indigo-800'}`}>
-                  Start a conversation in the chat tab
+                <Text className={`text-base mr-3 ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>2.</Text>
+                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-orange-800'}`}>
+                  Start cooking conversations in the chat tab
                 </Text>
               </View>
 
               <View className="flex-row items-center">
-                <Text className={`text-base mr-3 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>3.</Text>
-                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-indigo-800'}`}>
-                  Ask questions related to your uploaded content
+                <Text className={`text-base mr-3 ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>3.</Text>
+                <Text className={`text-base flex-1 ${isDark ? 'text-gray-300' : 'text-orange-800'}`}>
+                  Ask about recipes, techniques, and cooking tips
                 </Text>
               </View>
             </View>
