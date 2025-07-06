@@ -62,15 +62,32 @@ This application demonstrates how to build a modern AI-powered culinary assistan
    - Web: Press `w` in terminal or use `npm run web`
    - Expo Go: Scan QR code with the Expo Go app ([iOS](https://apps.apple.com/app/expo-go/id982107779) | [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
 
-## Quick Start with QR Code
+## App Screenshots
 
-Scan this QR code with your Expo Go app to open the project:
+### Home Screen
+The welcome page introduces users to the app's culinary features and provides easy navigation to all sections.
 
-![Expo QR Code](https://qr.expo.dev/expo-go?owner=dwihp2&slug=rag-chatbot-app&releaseChannel=default&host=exp.host)
+![Home Page](./assets/images/Home%20page.png)
 
-> **Note**: This QR code links to the deployed version of this application on Expo's servers.
->
-> You can also access the project directly in Expo Go by searching for "@dwihp2/rag-chatbot-app" or by visiting the [project page](https://expo.dev/@dwihp2/rag-chatbot-app) on Expo's website.
+### Chat Interface
+Interactive AI culinary assistant that provides cooking guidance, recipe recommendations, and answers cooking questions.
+
+![Chat Page](./assets/images/Chat%20Page.png)
+
+### Active Conversation
+The chat interface in action, showing how the AI assistant helps with cooking queries and provides detailed responses.
+
+![Chat with Conversation](./assets/images/Chat%20page%20+%20conversation.png)
+
+### Recipe Upload
+Users can upload cookbooks, recipes, and cooking guides to expand the AI's knowledge base.
+
+![Recipe Upload Page](./assets/images/Recipe%20Upload%20Page.png)
+
+### Image Generation
+AI-powered image generation for visualizing dishes and food creations.
+
+![Image Generation Page](./assets/images/Image%20Generation%20Page.png)
 
 ## Application Structure
 
